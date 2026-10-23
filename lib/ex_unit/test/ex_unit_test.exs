@@ -309,6 +309,58 @@ defmodule ExUnitTest do
     assert output =~ "Failed: 1 test"
   end
 
+  test "excludes the given test IDs when the :exclude_test_ids option is provided" do
+    defmodule ExcludeTestIdTestModule do
+      use ExUnit.Case
+
+      test "passing", do: :ok
+      test "failing", do: assert(1 == 2)
+    end
+
+    defmodule ExcludeTestIdSameNameTestModule do
+      use ExUnit.Case
+
+      test "failing", do: :ok
+    end
+
+    test_ids = [
+      {ExcludeTestIdTestModule, :"test failing"},
+      {MissingModule, :"test passing"}
+    ]
+
+    {result, output} = run_with_filter([exclude_test_ids: test_ids, include: [:test]], [])
+    assert result == %{failures: 0, skipped: 0, excluded: 1, total: 3}
+    assert output =~ "Result: 2 passed, 1 excluded"
+  end
+
+  test "combines :exclude_test_ids with :only_test_ids and tag filters" do
+    defmodule ExcludeTestIdComposeTestModule do
+      use ExUnit.Case
+
+      test "one", do: :ok
+
+      @tag :slow
+      test "two", do: :ok
+
+      test "three", do: assert(1 == 2)
+      test "four", do: assert(1 == 2)
+    end
+
+    only_test_ids =
+      MapSet.new([
+        {ExcludeTestIdComposeTestModule, :"test one"},
+        {ExcludeTestIdComposeTestModule, :"test two"},
+        {ExcludeTestIdComposeTestModule, :"test three"}
+      ])
+
+    exclude_test_ids = [{ExcludeTestIdComposeTestModule, :"test three"}]
+
+    filters = [only_test_ids: only_test_ids, exclude_test_ids: exclude_test_ids, exclude: [:slow]]
+    {result, output} = run_with_filter(filters, [])
+    assert result == %{failures: 0, skipped: 0, excluded: 2, total: 3}
+    assert output =~ "Result: 1 passed, 2 excluded"
+  end
+
   test "filtering cases with tags" do
     defmodule ParityTest do
       use ExUnit.Case
