@@ -119,6 +119,7 @@ defmodule ExUnit do
                diff_delete_whitespace: IO.ANSI.ansidata()
              ]}
           | {:exclude, atom() | [atom() | {atom(), any()}]}
+          | {:exclude_test_ids, [test_id()]}
           | {:exit_status, non_neg_integer()}
           | {:failures_manifest_path, String.t()}
           | {:formatters, [module()]}
@@ -344,6 +345,12 @@ defmodule ExUnit do
     * `:exclude` - specifies which tests are run by skipping tests that match the
       filter. For more information, see the "Tags" and "Filters" sections in the
       documentation for `ExUnit.Case`;
+
+    * `:exclude_test_ids` - a list of `{module_name, test_name}` tuples of tests
+      to exclude from the run. Unlike the `:exclude` filter, which matches one tag
+      at a time, this excludes exactly the given test in the given module. Tests
+      excluded this way are reported as excluded and cannot be brought back by the
+      `:include` filter;
 
     * `:exit_status` - specifies an alternate exit status to use when the test
       suite fails. Defaults to `2`;

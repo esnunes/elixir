@@ -78,6 +78,7 @@ defmodule ExUnit.Runner do
     %{
       capture_log: opts[:capture_log],
       exclude: opts[:exclude],
+      exclude_test_ids: exclude_test_ids(opts[:exclude_test_ids]),
       include: opts[:include],
       manager: manager,
       max_cases: opts[:max_cases],
@@ -283,6 +284,7 @@ defmodule ExUnit.Runner do
     include = config.include
     exclude = config.exclude
     test_ids = config.only_test_ids
+    exclude_test_ids = config.exclude_test_ids
 
     {to_run, to_skip} =
       for test <- tests, include_test?(test_ids, test), reduce: {[], []} do
@@ -295,7 +297,14 @@ defmodule ExUnit.Runner do
               test_group: group
             })
 
-          case ExUnit.Filters.eval(include, exclude, tags, tests) do
+          state =
+            if exclude_test_id?(exclude_test_ids, test) do
+              {:excluded, "due to exclude_test_ids option"}
+            else
+              ExUnit.Filters.eval(include, exclude, tags, tests)
+            end
+
+          case state do
             :ok -> {[%{test | tags: tags} | to_run], to_skip}
             excluded_or_skipped -> {to_run, [%{test | state: excluded_or_skipped} | to_skip]}
           end
@@ -307,6 +316,13 @@ defmodule ExUnit.Runner do
   defp include_test?(test_ids, test) do
     test_ids == nil or MapSet.member?(test_ids, {test.module, test.name})
   end
+
+  defp exclude_test_id?(test_ids, test) do
+    test_ids != nil and MapSet.member?(test_ids, {test.module, test.name})
+  end
+
+  defp exclude_test_ids(nil), do: nil
+  defp exclude_test_ids(test_ids), do: MapSet.new(test_ids)
 
   defp run_module_tests(_config, test_module, _async?, []) do
     {test_module, [], []}
